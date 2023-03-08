@@ -1,13 +1,8 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:to_do_app/assets/stream.dart';
-import 'package:to_do_app/pages/mydrawer.dart';
-import 'package:to_do_app/assets/todo.dart';
-import 'package:to_do_app/assets/todoitem.dart';
-
 import 'myprofile.dart';
 
 class homepage extends StatefulWidget {
@@ -22,38 +17,40 @@ class _homepageState extends State<homepage> {
   List<String> foundtodo = [];
   final _todocontroller = TextEditingController();
 
-  final User = FirebaseAuth.instance.currentUser;
+  final user = FirebaseAuth.instance.currentUser;
 
   Future<List<String>> gettasks() async {
     List<String> todolist = [];
 
-    await FirebaseFirestore.instance
-        .collection(User!.uid)
-        .get()
-        .then((snapshot) {
-      snapshot.docs.forEach((document) {
-        todolist.add(document.reference.id);
-      });
+    final collectionRef = FirebaseFirestore.instance.collection('todos');
+    final querySnapshot =
+        await collectionRef.where('id', isEqualTo: user!.uid).get();
+    querySnapshot.docs.forEach((document) {
+      todolist.add(document.reference.id);
     });
 
     return todolist;
   }
 
-  Future<String> getname(String name) async {
-    final documentSnapshot =
-        await FirebaseFirestore.instance.collection(User!.uid).doc().get();
-    Map<String, dynamic> data = documentSnapshot.data() as Map<String, dynamic>;
-    return data[name] ?? 'loading';
+  getdata() async {
+    final collectionRef =
+        FirebaseFirestore.instance.collection('collection_name');
+
+    final querySnapshot =
+        await collectionRef.where('id', isEqualTo: user!.uid).get();
+
+    String dataField;
+
+    dataField = querySnapshot.toString();
+
+    return dataField;
   }
 
-  Future adduserdetails(
-      String name, String username, String email, ToDo toDo) async {
-    await FirebaseFirestore.instance.collection(email).doc(toDo.id).set({
-      'name': name,
-      'username': username,
-      'todo': toDo.todoText,
-      'isDone': toDo.isDone,
-    });
+  Future adduserdetails(String todo) async {
+    await FirebaseFirestore.instance
+        .collection('todos')
+        .doc(todo)
+        .set({'id': user!.uid, 'isdone': false});
   }
 
   @override
@@ -77,18 +74,18 @@ class _homepageState extends State<homepage> {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => profile(
-                              name: 'shripad kulkarni',
-                              email: User!.email!,
+                        builder: (context) => Profile(
+                              name: 'Shripad Kulkarni',
+                              email: user!.email!,
                               username: 'shripad',
                             )));
               },
-              child: CircleAvatar(
+              child: const CircleAvatar(
                 backgroundImage: AssetImage('images/prifile.jpg'),
                 radius: 20,
               ),
             ),
-            Text(
+            const Text(
               'Welcome Back',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
@@ -96,7 +93,7 @@ class _homepageState extends State<homepage> {
               onTap: () {
                 FirebaseAuth.instance.signOut();
               },
-              child: Icon(Icons.logout),
+              child: const Icon(Icons.logout),
             )
           ]),
           centerTitle: true,
@@ -104,9 +101,9 @@ class _homepageState extends State<homepage> {
         body: Column(
           children: <Widget>[
             Padding(
-              padding: EdgeInsets.fromLTRB(25, 20, 25, 20),
+              padding: const EdgeInsets.fromLTRB(25, 20, 25, 20),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20)),
@@ -128,7 +125,7 @@ class _homepageState extends State<homepage> {
               ),
             ),
             Container(
-              margin: EdgeInsets.only(top: 20, bottom: 10),
+              margin: const EdgeInsets.only(top: 10, bottom: 10),
               child: const Text(
                 'All To-Dos',
                 style: TextStyle(
@@ -137,42 +134,31 @@ class _homepageState extends State<homepage> {
                     color: Colors.black),
               ),
             ),
-            FutureBuilder(
-              future: gettasks(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                      child: CircularProgressIndicator(
-                    color: Colors.black,
-                  ));
-                } else if (snapshot.hasError) {
-                  return Text('Error: ${snapshot.error}');
-                } else {
-                  final todolist = snapshot.data as List<String>;
-                  return Flexible(
-                      child: CustomScrollView(
-                    slivers: [
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (BuildContext context, int index) {
-                            return ListTile(
-                              title: ToDoItem(
-                                todoid: todolist[index],
-                                onToDoChanged:
-                                    _handleToDochange(todolist[index]),
-                                onDeleteItem:
-                                    _handleToDoDelete(todolist[index]),
-                              ),
-                            );
-                          },
-                          childCount: todolist.length,
-                        ),
-                      ),
-                    ],
-                  ));
-                }
-              },
-            )
+            Expanded(
+              child: FutureBuilder(
+                future: gettasks(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                        child: CircularProgressIndicator(
+                      color: Colors.black,
+                    ));
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else {
+                    final todolist = snapshot.data as List<String>;
+                    return ListView.builder(
+                      itemCount: todolist.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          title: toDoItem(todolist[index]),
+                        );
+                      },
+                    );
+                  }
+                },
+              ),
+            ),
           ],
         ),
         floatingActionButton: Center(
@@ -192,34 +178,6 @@ class _homepageState extends State<homepage> {
     );
   }
 
-  _handleToDochange(String todoid) async {
-    final documentSnapshot = await FirebaseFirestore.instance
-        .collection(User!.uid)
-        .doc(todoid)
-        .get();
-    bool boolValue = documentSnapshot.data()!['isDone'];
-    if (boolValue) {
-      await FirebaseFirestore.instance.collection(User!.uid).doc(todoid).set({
-        'isDone': false,
-      });
-    }
-
-    setState(() {});
-  }
-
-  _handleToDoDelete(String todoid) {
-    DocumentReference documentReference =
-        FirebaseFirestore.instance.collection(User!.uid).doc(todoid);
-    documentReference.delete().whenComplete(() => null);
-  }
-
-  // void addtodoitems(String todo) {
-  //   setState(() {
-  //     // adduserdetails(name, username, email, toDo)
-  //   });
-  //   _todocontroller.clear();
-  // }
-
   Future<void> _dialogBuilder(BuildContext context) {
     return showDialog<void>(
       context: context,
@@ -227,16 +185,16 @@ class _homepageState extends State<homepage> {
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          title: Text('Add Task'),
+          title: const Text('Add Task'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               TextField(
                 controller: _todocontroller,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                     border: InputBorder.none, hintText: 'Enter your task'),
                 autofocus: true,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 18,
                   fontFamily: "Raleway",
                 ),
@@ -246,18 +204,15 @@ class _homepageState extends State<homepage> {
                   ElevatedButton(
                     onPressed: () async {
                       if (_todocontroller.text.isNotEmpty) {
-                        ToDo newtodo = ToDo(
-                            id: DateTime.now().second.toString(),
-                            todoText: _todocontroller.text);
-                        await adduserdetails(
-                            getname('name').toString(),
-                            getname('username').toString(),
-                            User!.email!,
-                            newtodo);
+                        adduserdetails(_todocontroller.text.trim());
+                        setState(() {
+                          gettasks();
+                        });
+                        _todocontroller.clear();
                         Navigator.of(context).pop();
                       }
                     },
-                    child: Text('Add'),
+                    child: const Text('Add'),
                     style: ButtonStyle(
                         backgroundColor:
                             MaterialStateProperty.all(Colors.black)),
@@ -271,17 +226,125 @@ class _homepageState extends State<homepage> {
     );
   }
 
+  Future<bool> getisdone(String todo) async {
+    final documentSnapshot =
+        await FirebaseFirestore.instance.collection('todos').doc(todo).get();
+    final boolValue = documentSnapshot.get('isdone') ?? false;
+    return boolValue;
+  }
+
+  Future _handleToDoChange(String todo) async {
+    final docRef =
+        FirebaseFirestore.instance.collection('todos').doc(todo.trim());
+
+    try {
+      final documentSnapshot = await docRef.get();
+
+      if (documentSnapshot.exists) {
+        bool isDone = documentSnapshot.get('isdone');
+        await docRef.update({'isdone': !isDone});
+        setState(() {});
+      } else {
+        print('value does not exist');
+      }
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'not-found') {
+        print('Document not found');
+      } else {
+        print('Error: $e');
+      }
+    }
+  }
+
+  Future<void> _handleToDoDelete(String todo) async {
+    final collectionRef = FirebaseFirestore.instance.collection('todos');
+
+    final querySnapshot =
+        await collectionRef.where('id', isEqualTo: user!.uid).get();
+    querySnapshot.docs.forEach((doc) {
+      if (doc.id == todo) {
+        doc.reference.delete();
+      }
+    });
+
+    setState(() {});
+  }
+
+  toDoItem(String todo) {
+    return FutureBuilder(
+      future: getisdone(todo),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        } else if (snapshot.hasData) {
+          final isDone = snapshot.data as bool;
+          // Use the value of isDone here
+          return Container(
+            margin: const EdgeInsets.all(10),
+            child: ListTile(
+              onTap: () async {
+                await _handleToDoChange(todo);
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+              tileColor: Colors.white,
+              leading: Icon(
+                isDone ? Icons.check_box : Icons.check_box_outline_blank,
+                color: Colors.black,
+              ),
+              title: Text(
+                todo,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black,
+                  decoration: isDone ? TextDecoration.lineThrough : null,
+                ),
+              ),
+              trailing: Container(
+                padding: const EdgeInsets.all(0),
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                height: 35,
+                width: 35,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: IconButton(
+                  color: Colors.white,
+                  iconSize: 18,
+                  icon: const Icon(Icons.delete),
+                  onPressed: () async {
+                    await _handleToDoDelete(todo);
+                  },
+                ),
+              ),
+            ),
+          );
+        } else {
+          // Handle case where future completes with an error
+          return Text('Error: ${snapshot.error}');
+        }
+      },
+    );
+  }
+
   void _runFilter(String enteredkeyword) {
     List<String> result = [];
     if (enteredkeyword.isEmpty) {
       result = todolist;
     } else {
-      result = todolist
-          .where((element) => getname('todo')
-              .toString()
-              .toLowerCase()
-              .contains(enteredkeyword.toLowerCase()))
-          .toList();
+      int index = todolist.length;
+      for (int i = 0; i < index; i++) {
+        result = todolist
+            .where((element) => todolist[i]
+                .toString()
+                .toLowerCase()
+                .contains(enteredkeyword.toLowerCase()))
+            .toList();
+      }
     }
 
     setState(() {

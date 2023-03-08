@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 // import 'package:google_fonts/google_fonts.dart';
-import 'package:to_do_app/pages/login.dart';
-import 'package:to_do_app/pages/mydrawer.dart';
-import 'package:to_do_app/pages/myprofile.dart';
-import 'pages/homepage.dart';
-import 'package:to_do_app/pages/signup.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:to_do_app/pages/mainpage.dart';
 
 void main() async {
+  // Initialize Firebase
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  // Run your app
   runApp(const MyApp());
 }
 

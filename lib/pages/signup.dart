@@ -2,13 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:to_do_app/assets/mytextfeild.dart';
-import 'package:to_do_app/assets/todo.dart';
-import 'package:to_do_app/pages/homepage.dart';
-import 'package:to_do_app/pages/login.dart';
 
 class SignUp extends StatefulWidget {
   final VoidCallback showloginpage;
-  SignUp({Key? key, required this.showloginpage}) : super(key: key);
+  const SignUp({Key? key, required this.showloginpage}) : super(key: key);
 
   @override
   State<SignUp> createState() => SignupState();
@@ -22,14 +19,11 @@ class SignupState extends State<SignUp> {
   final _username = TextEditingController();
   final _password = TextEditingController();
   final _cpassword = TextEditingController();
-  final todolist = ToDo.TodoList();
 
-  adduserdetails(String name, String username, String email, ToDo toDo) async {
-    await FirebaseFirestore.instance.collection(user!.uid).doc(toDo.id).set({
-      'name': name,
+  Future<void> adduserdetails(String name, String username) async {
+    await FirebaseFirestore.instance.collection('userdetails').doc(name).set({
+      'id': user!.uid,
       'username': username,
-      'todo': toDo.todoText,
-      'isDone': toDo.isDone,
     });
   }
 
@@ -46,18 +40,15 @@ class SignupState extends State<SignUp> {
         },
       );
       try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        // Create user in Firebase Authentication
+        UserCredential userCredential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _email.text.toString().trim(),
           password: _password.text,
         );
-        for (ToDo toDo in todolist) {
-          adduserdetails(
-            _name.text.trim(),
-            _username.text.trim(),
-            _email.text.trim(),
-            toDo,
-          );
-        }
+
+        adduserdetails(_name.text, _username.text.trim());
+
         Navigator.of(context).pop();
       } catch (e) {
         Navigator.of(context).pop();
@@ -165,7 +156,7 @@ class SignupState extends State<SignUp> {
                       hintText: 'Confirm your Password',
                       obscureText: true),
                 ),
-                SizedBox(
+                const SizedBox(
                   height: 30,
                 ),
                 ElevatedButton.icon(

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-class profile extends StatefulWidget {
+class Profile extends StatefulWidget {
   final String? name;
   final String? username;
   final String? email;
 
-  const profile({
+  const Profile({
     Key? key,
     required this.name,
     required this.email,
@@ -13,10 +13,10 @@ class profile extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<profile> createState() => _profileState();
+  State<Profile> createState() => _ProfileState();
 }
 
-class _profileState extends State<profile> {
+class _ProfileState extends State<Profile> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
